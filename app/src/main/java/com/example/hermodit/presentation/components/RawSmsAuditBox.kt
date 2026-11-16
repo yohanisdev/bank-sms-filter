@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -39,6 +41,7 @@ import com.example.hermodit.presentation.theme.HermoditColors
 fun RawSmsAuditBox(
     rawSmsContent: String?,
     modifier: Modifier = Modifier,
+    senderId: String? = null,
     initialExpanded: Boolean = false,
 ) {
     var isExpanded by remember { mutableStateOf(initialExpanded) }
@@ -69,6 +72,23 @@ fun RawSmsAuditBox(
                         fontWeight = FontWeight.Bold,
                         color = HermoditColors.TextPrimary
                     )
+                    if (!senderId.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(HermoditColors.PrimaryContainer)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = senderId,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = HermoditColors.Primary,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
                 }
 
                 Box(

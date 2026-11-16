@@ -1,8 +1,10 @@
 package com.example.hermodit.presentation.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import com.example.hermodit.domain.model.BankAccountConfig
+import androidx.compose.ui.platform.LocalContext
 import com.example.hermodit.presentation.config.AccountConfigScreen
 import com.example.hermodit.presentation.dailydetail.DailyDetailScreen
 import com.example.hermodit.presentation.dashboard.DashboardScreen
@@ -19,6 +21,9 @@ fun HermoditNavHost(
     modifier: Modifier = Modifier,
     navigator: HermoditNavigator = rememberHermoditNavigator()
 ) {
+    val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
+
     when (val screen = navigator.currentScreen) {
         is Screen.Dashboard -> {
             DashboardScreen(
@@ -35,6 +40,8 @@ fun HermoditNavHost(
                 repository = viewModel.repository,
                 onNavigateBack = { navigator.popBack() },
                 onNavigateToTransactionDetail = { txId -> navigator.navigateToTransactionDetail(txId) },
+                onNavigateToDashboard = { navigator.navigateToDashboard() },
+                onNavigateToSettings = { navigator.navigateToSettings() },
                 modifier = modifier
             )
         }
@@ -48,8 +55,11 @@ fun HermoditNavHost(
         }
         is Screen.AccountConfig -> {
             AccountConfigScreen(
-                initialConfig = BankAccountConfig(),
+                initialConfig = uiState.accountConfig,
                 onNavigateBack = { navigator.popBack() },
+                onSaveConfig = { config -> viewModel.saveAccountConfig(config) },
+                onStartScan = { viewModel.startInboxScan(context) },
+                isScanning = uiState.scanProgress.isScanning,
                 modifier = modifier
             )
         }
@@ -58,13 +68,14 @@ fun HermoditNavHost(
                 onNavigateBack = { navigator.popBack() },
                 onNavigateToDashboard = { navigator.navigateToDashboard() },
                 onNavigateToTransactions = {
-                    val latestDate = viewModel.uiState.value.dailyGroups.firstOrNull()?.summary?.date
+                    val latestDate = uiState.dailyGroups.firstOrNull()?.summary?.date
                     if (latestDate != null) {
                         navigator.navigateToDailyDetail(latestDate)
                     } else {
                         navigator.navigateToDashboard()
                     }
                 },
+                onSyncNowClick = { viewModel.startInboxScan(context) },
                 modifier = modifier
             )
         }

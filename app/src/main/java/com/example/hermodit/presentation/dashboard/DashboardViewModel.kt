@@ -1,15 +1,19 @@
 package com.example.hermodit.presentation.dashboard
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.hermodit.data.datasource.InMemoryTransactionDataSource
+import androidx.lifecycle.viewmodel.CreationExtras
+import com.example.hermodit.data.datasource.RoomTransactionDataSource
+import com.example.hermodit.data.local.HermoditDatabase
 import com.example.hermodit.data.repository.TransactionRepositoryImpl
+import com.example.hermodit.data.sms.HistoricalSmsScanner
+import com.example.hermodit.data.sms.ScanProgress
 import com.example.hermodit.domain.model.BankAccountConfig
 import com.example.hermodit.domain.repository.TransactionRepository
 import com.example.hermodit.domain.usecase.GetDailyTransactionGroupsUseCase
 import com.example.hermodit.domain.usecase.GetFinancialSummaryUseCase
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,24 +22,24 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel managing state for the Main Dashboard screen.
+ * ViewModel managing state for the Main Dashboard screen, powered by Room local storage
+ * and the authorized historical SMS scanner.
  */
 class DashboardViewModel(
     private val getDailyGroupsUseCase: GetDailyTransactionGroupsUseCase,
     private val getFinancialSummaryUseCase: GetFinancialSummaryUseCase,
-    val repository: TransactionRepository
+    val repository: TransactionRepository,
+    private val scanner: HistoricalSmsScanner = HistoricalSmsScanner(repository)
 ) : ViewModel() {
 
-    private val isSyncingFlow = MutableStateFlow(false)
-    private val accountConfigFlow = MutableStateFlow(BankAccountConfig())
+    private val scanProgressFlow = MutableStateFlow(ScanProgress())
 
     val uiState: StateFlow<DashboardUiState> = combine(
         getDailyGroupsUseCase(),
         getFinancialSummaryUseCase(),
-        isSyncingFlow,
-        accountConfigFlow
-    ) { dailyGroups, summary, isSyncing, accountConfig ->
-        // Use latest reported balance from the most recent daily group that reported a balance
+        repository.getMonitoredAccountConfig(),
+        scanProgressFlow
+    ) { dailyGroups, summary, accountConfig, scanProgress ->
         val latestReportedBalance = dailyGroups
             .firstOrNull { it.summary.latestReportedBalance != null }
             ?.summary
@@ -43,11 +47,12 @@ class DashboardViewModel(
 
         DashboardUiState(
             isLoading = false,
-            isSyncing = isSyncing,
+            isSyncing = scanProgress.isScanning,
             accountConfig = accountConfig,
             availableBalance = latestReportedBalance,
             dailyGroups = dailyGroups,
-            summary = summary
+            summary = summary,
+            scanProgress = scanProgress
         )
     }.stateIn(
         scope = viewModelScope,
@@ -55,22 +60,34 @@ class DashboardViewModel(
         initialValue = DashboardUiState(isLoading = true)
     )
 
-    fun onSyncNowClick() {
-        if (isSyncingFlow.value) return
+    fun startInboxScan(context: Context) {
+        if (scanProgressFlow.value.isScanning) return
         viewModelScope.launch {
-            isSyncingFlow.value = true
-            // Simulate safe offline sync cycle for UI verification
-            delay(1200)
-            isSyncingFlow.value = false
+            val config = uiState.value.accountConfig
+            scanner.scanInbox(context, config) { progress ->
+                scanProgressFlow.value = progress
+            }
+        }
+    }
+
+    fun saveAccountConfig(config: BankAccountConfig) {
+        viewModelScope.launch {
+            repository.saveMonitoredAccountConfig(config)
         }
     }
 
     companion object {
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                val dataSource = InMemoryTransactionDataSource()
-                val repository = TransactionRepositoryImpl(dataSource)
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+                val application = checkNotNull(extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY])
+                val db = HermoditDatabase.getInstance(application)
+                val dataSource = RoomTransactionDataSource(db.transactionDao())
+                val repository = TransactionRepositoryImpl(
+                    localDataSource = dataSource,
+                    configDao = db.bankAccountConfigDao(),
+                    unmatchedSmsDao = db.unmatchedSmsDao()
+                )
                 val getDailyGroupsUseCase = GetDailyTransactionGroupsUseCase(repository)
                 val getFinancialSummaryUseCase = GetFinancialSummaryUseCase(repository)
                 return DashboardViewModel(

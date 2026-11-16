@@ -17,17 +17,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.hermodit.R
 import com.example.hermodit.core.util.CurrencyFormatter
 import com.example.hermodit.domain.model.DailyTransactionGroup
 import com.example.hermodit.presentation.theme.HermoditColors
@@ -45,7 +47,7 @@ fun DailyGroupCard(
     isToday: Boolean = false,
 ) {
     val summary = group.summary
-    val borderColor = if (isToday) Color(0xFFBAE6FD) else HermoditColors.OutlineVariant
+    val borderColor = if (isToday) HermoditColors.PrimaryBorder else HermoditColors.OutlineVariant
 
     Card(
         modifier = modifier
@@ -88,10 +90,10 @@ fun DailyGroupCard(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(50))
-                        .background(if (isToday) Color(0xFFF0F9FF) else Color(0xFFF1F5F9))
+                        .background(if (isToday) HermoditColors.PrimaryLight else HermoditColors.SurfaceNested)
                         .border(
                             1.dp,
-                            if (isToday) Color(0xFFBAE6FD) else Color(0xFFE2E8F0),
+                            if (isToday) HermoditColors.PrimaryBorder else HermoditColors.OutlineVariant,
                             RoundedCornerShape(50)
                         )
                         .padding(horizontal = 10.dp, vertical = 3.dp)
@@ -119,7 +121,7 @@ fun DailyGroupCard(
                     label = "RECEIVED",
                     amount = "+${CurrencyFormatter.formatAmountOnly(totalIn)} ETB",
                     isPositive = true,
-                    arrowSymbol = "↓",
+                    iconRes = R.drawable.ic_arrow_downward,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -128,7 +130,7 @@ fun DailyGroupCard(
                     label = "WITHDRAWN",
                     amount = "-${CurrencyFormatter.formatAmountOnly(summary.totalWithdrawn)} ETB",
                     isPositive = false,
-                    arrowSymbol = "↑",
+                    iconRes = R.drawable.ic_arrow_upward,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -156,41 +158,43 @@ fun DailyGroupCard(
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = "${if (isNetPositive) "+" else ""}${CurrencyFormatter.formatAmountOnly(summary.netMovement)} ETB Net",
+                            text = "${if (isNetPositive) "+" else ""}${CurrencyFormatter.formatAmountOnly(summary.netMovement)} ETB",
                             style = MaterialTheme.typography.labelSmall,
+                            fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
                             color = netColor,
                             fontSize = 11.sp
                         )
                     }
 
+                    Spacer(modifier = Modifier.width(8.dp))
+
                     summary.latestReportedBalance?.let { eod ->
-                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "EOD: ${CurrencyFormatter.formatAmountOnly(eod)} ETB",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelSmall,
                             fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Medium,
                             color = HermoditColors.TextSecondary,
                             fontSize = 11.sp
                         )
                     }
                 }
 
+                // Tap cue
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Tap to inspect",
+                        text = if (isToday) "View ${summary.transactionCount} txs" else "Inspect",
                         style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        color = HermoditColors.Primary,
-                        fontSize = 12.sp
+                        color = if (isToday) HermoditColors.Primary else HermoditColors.TextSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = if (isToday) FontWeight.Medium else FontWeight.Normal
                     )
                     Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = "›",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = HermoditColors.Primary
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_chevron_right),
+                        contentDescription = "Inspect",
+                        tint = if (isToday) HermoditColors.Primary else HermoditColors.TextSecondary,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
@@ -203,12 +207,12 @@ private fun MetricBox(
     label: String,
     amount: String,
     isPositive: Boolean,
-    arrowSymbol: String,
+    @androidx.annotation.DrawableRes iconRes: Int,
     modifier: Modifier = Modifier
 ) {
-    val bg = if (isPositive) Color(0xFFECFDF5) else Color(0xFFFEF2F2)
-    val border = if (isPositive) Color(0xFFA7F3D0) else Color(0xFFFECACA)
-    val color = if (isPositive) HermoditColors.InflowEmerald else HermoditColors.OutflowCrimson
+    val bg = if (isPositive) HermoditColors.InflowEmeraldContainer else HermoditColors.OutflowCrimsonContainer
+    val border = if (isPositive) HermoditColors.InflowEmeraldBorder else HermoditColors.OutflowCrimsonBorder
+    val textColor = if (isPositive) HermoditColors.InflowEmerald else HermoditColors.OutflowCrimson
 
     Box(
         modifier = modifier
@@ -226,35 +230,37 @@ private fun MetricBox(
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = HermoditColors.TextSecondary,
-                    fontSize = 10.sp
-                )
-                Text(
-                    text = arrowSymbol,
                     fontWeight = FontWeight.Bold,
-                    color = color,
-                    fontSize = 14.sp
+                    color = HermoditColors.TextSecondary,
+                    fontSize = 10.sp,
+                    letterSpacing = 0.5.sp
+                )
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = label,
+                    tint = textColor,
+                    modifier = Modifier.size(14.dp)
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = amount,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,
-                color = color
+                color = textColor,
+                fontSize = 13.sp
             )
         }
     }
 }
 
 private fun formatGroupDate(date: LocalDate, isToday: Boolean): String {
+    val today = LocalDate.now()
+    val yesterday = today.minusDays(1)
     return when {
-        isToday -> "Today, ${date.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }} ${date.dayOfMonth}, ${date.year}"
-        date == LocalDate.now().minusDays(1) || date == LocalDate.of(2026, 11, 15) ->
-            "Yesterday, ${date.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }} ${date.dayOfMonth}, ${date.year}"
-        else ->
-            "${date.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }} ${date.dayOfMonth}, ${date.year}"
+        isToday || date == today -> "Today, ${date.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }} ${date.dayOfMonth}, ${date.year}"
+        date == yesterday -> "Yesterday, ${date.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }} ${date.dayOfMonth}, ${date.year}"
+        else -> "${date.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }} ${date.dayOfMonth}, ${date.year}"
     }
 }

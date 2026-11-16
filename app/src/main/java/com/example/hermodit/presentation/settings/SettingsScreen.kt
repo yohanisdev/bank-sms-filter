@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -37,10 +38,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.hermodit.R
 import com.example.hermodit.domain.model.SyncSettings
 import com.example.hermodit.presentation.components.HermoditBottomNav
 import com.example.hermodit.presentation.navigation.Screen
@@ -55,12 +58,15 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToDashboard: () -> Unit,
     onNavigateToTransactions: () -> Unit,
+    onSyncNowClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     BackHandler(onBack = onNavigateBack)
 
     var autoSyncEnabled by remember { mutableStateOf(initialSettings.automaticSyncEnabled) }
-    var oditApiEnabled by remember { mutableStateOf(initialSettings.oditApiIntegrationEnabled) }
+    var selectedTheme by remember { mutableStateOf("Light (System Default)") }
+    var decimalPrecision by remember { mutableStateOf("2 Decimal Places") }
+    var numberGrouping by remember { mutableStateOf("1,234.56 (Comma)") }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -81,28 +87,50 @@ fun SettingsScreen(
                         onClick = onNavigateBack,
                         modifier = Modifier.size(40.dp)
                     ) {
-                        Text(
-                            text = "←",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = HermoditColors.TextPrimary
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_arrow_back),
+                            contentDescription = "Back",
+                            tint = HermoditColors.TextPrimary,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Settings",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = HermoditColors.TextPrimary
                         )
-                        Text(
-                            text = "Preferences & On-Device Engine",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = HermoditColors.TextSecondary,
-                            fontSize = 11.sp
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(HermoditColors.InflowEmerald)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "OFFLINE ENGINE ACTIVE",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = HermoditColors.InflowEmeraldDark,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = onSyncNowClick,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_sync),
+                            contentDescription = "Sync",
+                            tint = HermoditColors.Primary,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
@@ -171,7 +199,10 @@ fun SettingsScreen(
                             Switch(
                                 checked = autoSyncEnabled,
                                 onCheckedChange = { autoSyncEnabled = it },
-                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = HermoditColors.Primary)
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = HermoditColors.Primary
+                                )
                             )
                         }
 
@@ -203,7 +234,7 @@ fun SettingsScreen(
                                     Text(
                                         text = initialSettings.lastSuccessfulSync,
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = HermoditColors.InflowEmerald,
+                                        color = HermoditColors.InflowEmeraldDark,
                                         fontWeight = FontWeight.Medium,
                                         fontSize = 12.sp
                                     )
@@ -216,7 +247,7 @@ fun SettingsScreen(
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = "3 mins ago",
+                                    text = "Real-Time / Ready",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = HermoditColors.TextSecondary,
                                     fontSize = 11.sp
@@ -226,7 +257,7 @@ fun SettingsScreen(
 
                         SettingsDivider()
 
-                        // Item: SMS Background Worker
+                        // Item: SMS Background Engine
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -236,13 +267,13 @@ fun SettingsScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = "SMS Background Worker",
+                                    text = "Broadcast Receiver",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.SemiBold,
                                     color = HermoditColors.TextPrimary
                                 )
                                 Text(
-                                    text = "Active (Android WorkManager)",
+                                    text = "Registered in AndroidManifest",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = HermoditColors.TextSecondary,
                                     fontSize = 12.sp
@@ -256,51 +287,10 @@ fun SettingsScreen(
                                     .padding(horizontal = 10.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = "Battery Optimized",
+                                    text = "Active Listener",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = HermoditColors.InflowEmerald,
-                                    fontSize = 11.sp
-                                )
-                            }
-                        }
-
-                        SettingsDivider()
-
-                        // Item: Sync Retries
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Sync Retries on Delivery Failures",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = HermoditColors.TextPrimary
-                                )
-                                Text(
-                                    text = "Exponential backoff schedule",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = HermoditColors.TextSecondary,
-                                    fontSize = 12.sp
-                                )
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(Color(0xFFF0F9FF))
-                                    .border(1.dp, Color(0xFFBAE6FD), RoundedCornerShape(6.dp))
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = "3 Attempts",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = HermoditColors.Primary,
+                                    color = HermoditColors.InflowEmeraldDark,
                                     fontSize = 11.sp
                                 )
                             }
@@ -309,10 +299,10 @@ fun SettingsScreen(
                 }
             }
 
-            // SECTION 2: Future Odit API Integration
+            // SECTION 2: Appearance & Display
             item {
                 Text(
-                    text = "EXTERNAL API BOUNDARY (ODIT)",
+                    text = "APPEARANCE & DISPLAY",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = HermoditColors.Primary,
@@ -328,67 +318,164 @@ fun SettingsScreen(
                     border = androidx.compose.foundation.BorderStroke(1.dp, HermoditColors.OutlineVariant),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column {
+                        // Theme Preference
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column {
                                 Text(
-                                    text = "Odit Financial API Boundary",
+                                    text = "App Theme",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.SemiBold,
                                     color = HermoditColors.TextPrimary
                                 )
                                 Text(
-                                    text = "Prepare integration boundary for external Odit consumer",
+                                    text = "Stitch Clean Light theme",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = HermoditColors.TextSecondary,
                                     fontSize = 12.sp
                                 )
                             }
-                            Switch(
-                                checked = oditApiEnabled,
-                                onCheckedChange = { oditApiEnabled = it },
-                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = HermoditColors.Primary)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFFF8FAFC))
-                                .border(1.dp, HermoditColors.OutlineVariant, RoundedCornerShape(8.dp))
-                                .padding(10.dp)
-                        ) {
-                            Column {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFFF1F5F9))
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
                                 Text(
-                                    text = "Configured Endpoint Placeholder:",
+                                    text = selectedTheme,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = HermoditColors.TextSecondary,
-                                    fontSize = 10.sp
-                                )
-                                Text(
-                                    text = initialSettings.oditApiEndpoint,
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 11.sp,
-                                    color = HermoditColors.TextPrimary
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = HermoditColors.TextPrimary,
+                                    fontSize = 11.sp
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        SettingsDivider()
 
-                        Text(
-                            text = "Status: Awaiting external API specification • Zero network transmission in this phase.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = HermoditColors.TextMuted,
-                            fontSize = 11.sp
-                        )
+                        // Currency Display
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Currency Display",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = HermoditColors.TextPrimary
+                                )
+                                Text(
+                                    text = "ISO 4217 standard symbol",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = HermoditColors.TextSecondary,
+                                    fontSize = 12.sp
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(HermoditColors.PrimaryContainer)
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "ETB (Ethiopian Birr)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = HermoditColors.Primary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+
+                        SettingsDivider()
+
+                        // Decimal Precision
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Decimal Precision",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = HermoditColors.TextPrimary
+                                )
+                                Text(
+                                    text = "Display cents in all transaction lists",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = HermoditColors.TextSecondary,
+                                    fontSize = 12.sp
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFFF1F5F9))
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = decimalPrecision,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = HermoditColors.TextPrimary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+
+                        SettingsDivider()
+
+                        // Number Grouping Format
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Number Grouping Format",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = HermoditColors.TextPrimary
+                                )
+                                Text(
+                                    text = "Standard financial thousand separators",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = HermoditColors.TextSecondary,
+                                    fontSize = 12.sp
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFFF1F5F9))
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = numberGrouping,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = HermoditColors.TextPrimary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -425,7 +512,7 @@ fun SettingsScreen(
                                 color = HermoditColors.TextPrimary
                             )
                             Text(
-                                text = "Encrypted SQLite",
+                                text = "Room SQLite Database",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontFamily = FontFamily.Monospace,
                                 color = HermoditColors.TextSecondary
@@ -449,21 +536,27 @@ fun SettingsScreen(
                                 text = "Disabled (100% Offline)",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = HermoditColors.InflowEmerald
+                                color = HermoditColors.InflowEmeraldDark
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
-                        OutlinedButton(
-                            onClick = { /* Clear cache UI only */ },
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(10.dp)
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Clear Parse Cache (Safe)",
-                                color = HermoditColors.TextSecondary,
-                                fontSize = 12.sp
+                                text = "Monitored Account Policy",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = HermoditColors.TextPrimary
+                            )
+                            Text(
+                                text = "Single Account (1000763003608)",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = HermoditColors.TextSecondary
                             )
                         }
                     }

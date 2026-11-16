@@ -17,11 +17,19 @@ data class FinancialTransaction(
     val currency: String = "ETB",
     val counterpartyName: String? = null,
     val counterpartyAccount: String? = null,
+    val rawSenderName: String? = null,
     val transactionDate: LocalDate,
     val transactionTime: LocalTime? = null,
     val availableBalance: BigDecimal? = null,
     val bankReferenceNumber: String? = null,
     val rawSmsContent: String? = null,
     val sourceIdentifier: String,
-    val smsTimestamp: Instant
+    val smsTimestamp: Instant,
+    val smsSenderId: String = "",
+    val channel: String? = null,
+    val serviceCharge: BigDecimal? = null,
+    val vat: BigDecimal? = null,
+    val disasterRecoveryCharge: BigDecimal? = null,
+    val totalDebit: BigDecimal? = null,
+    val parseStatus: ParseStatus = ParseStatus.CONFIRMED
 )

@@ -14,4 +14,6 @@ interface TransactionLocalDataSource {
     suspend fun insertTransaction(transaction: FinancialTransaction)
     suspend fun insertTransactions(transactions: List<FinancialTransaction>)
     suspend fun deleteTransaction(id: String)
+    suspend fun exists(sourceId: String, bankReferenceNumber: String?): Boolean
+    suspend fun getTransactionCount(): Int
 }

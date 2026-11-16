@@ -1,5 +1,6 @@
 package com.example.hermodit.presentation.components
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,7 +10,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -17,10 +20,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.hermodit.R
 import com.example.hermodit.presentation.navigation.Screen
 import com.example.hermodit.presentation.theme.HermoditColors
 
@@ -55,7 +59,7 @@ fun HermoditBottomNav(
 
             // Dashboard item
             NavItem(
-                icon = "⊞",
+                iconRes = R.drawable.ic_dashboard,
                 label = "Dashboard",
                 isActive = isDashboardActive,
                 onClick = onDashboardClick
@@ -63,7 +67,7 @@ fun HermoditBottomNav(
 
             // Transactions item
             NavItem(
-                icon = "☰",
+                iconRes = R.drawable.ic_receipt_long,
                 label = "Transactions",
                 isActive = isTransactionsActive,
                 onClick = onTransactionsClick
@@ -71,7 +75,7 @@ fun HermoditBottomNav(
 
             // Settings item
             NavItem(
-                icon = "⚙",
+                iconRes = R.drawable.ic_settings,
                 label = "Settings",
                 isActive = isSettingsActive,
                 onClick = onSettingsClick
@@ -82,7 +86,7 @@ fun HermoditBottomNav(
 
 @Composable
 private fun NavItem(
-    icon: String,
+    @DrawableRes iconRes: Int,
     label: String,
     isActive: Boolean,
     onClick: () -> Unit,
@@ -94,21 +98,21 @@ private fun NavItem(
             .then(
                 if (isActive) {
                     Modifier
-                        .background(Color(0xFFE0F2FE))
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .background(HermoditColors.PrimaryLight)
+                        .padding(horizontal = 18.dp, vertical = 6.dp)
                 } else {
-                    Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    Modifier.padding(horizontal = 18.dp, vertical = 6.dp)
                 }
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = icon,
-                fontSize = 18.sp,
-                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                color = if (isActive) HermoditColors.Primary else HermoditColors.TextSecondary
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = label,
+                tint = if (isActive) HermoditColors.Primary else HermoditColors.TextSecondary,
+                modifier = Modifier.size(22.dp)
             )
             Text(
                 text = label,

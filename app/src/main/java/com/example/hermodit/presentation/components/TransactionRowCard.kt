@@ -16,16 +16,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.hermodit.R
 import com.example.hermodit.core.util.CurrencyFormatter
 import com.example.hermodit.core.util.DateTimeUtils
 import com.example.hermodit.domain.model.FinancialTransaction
@@ -45,7 +48,16 @@ fun TransactionRowCard(
     val badgeBg = if (isInflow) HermoditColors.InflowEmeraldContainer else HermoditColors.OutflowCrimsonContainer
     val badgeBorder = if (isInflow) HermoditColors.InflowEmeraldBorder else HermoditColors.OutflowCrimsonBorder
     val amountColor = if (isInflow) HermoditColors.InflowEmerald else HermoditColors.OutflowCrimson
-    val arrowText = if (isInflow) "↓" else "↑"
+
+    val channelIcon = when {
+        transaction.counterpartyName?.contains("ATM", ignoreCase = true) == true -> R.drawable.ic_atm
+        transaction.counterpartyName?.contains("Telebirr", ignoreCase = true) == true -> R.drawable.ic_phone_android
+        transaction.counterpartyName?.contains("Supermarket", ignoreCase = true) == true ||
+            transaction.counterpartyName?.contains("POS", ignoreCase = true) == true -> R.drawable.ic_shopping_cart
+        transaction.type == TransactionType.DEPOSIT -> R.drawable.ic_account_balance
+        transaction.type == TransactionType.RECEIVED -> R.drawable.ic_payments
+        else -> if (isInflow) R.drawable.ic_arrow_downward else R.drawable.ic_arrow_upward
+    }
 
     Card(
         modifier = modifier
@@ -62,7 +74,7 @@ fun TransactionRowCard(
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Direction circle badge
+            // Direction / Channel circle badge
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -71,11 +83,11 @@ fun TransactionRowCard(
                     .border(1.dp, badgeBorder, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = arrowText,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = amountColor
+                Icon(
+                    painter = painterResource(id = channelIcon),
+                    contentDescription = transaction.type.name,
+                    tint = amountColor,
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
@@ -145,11 +157,11 @@ fun TransactionRowCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            Text(
-                text = "›",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = HermoditColors.Outline
+            Icon(
+                painter = painterResource(id = R.drawable.ic_chevron_right),
+                contentDescription = "Details",
+                tint = HermoditColors.Outline,
+                modifier = Modifier.size(18.dp)
             )
         }
     }

@@ -1,6 +1,7 @@
 package com.example.hermodit.presentation.dailydetail
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -39,15 +41,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.hermodit.R
 import com.example.hermodit.core.util.CurrencyFormatter
-import com.example.hermodit.domain.model.FinancialTransaction
 import com.example.hermodit.domain.model.TransactionType
 import com.example.hermodit.domain.repository.TransactionRepository
+import com.example.hermodit.presentation.components.HermoditBottomNav
 import com.example.hermodit.presentation.components.TransactionRowCard
+import com.example.hermodit.presentation.navigation.Screen
 import com.example.hermodit.presentation.theme.HermoditColors
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -62,15 +67,13 @@ fun DailyDetailScreen(
     repository: TransactionRepository,
     onNavigateBack: () -> Unit,
     onNavigateToTransactionDetail: (String) -> Unit,
+    onNavigateToDashboard: () -> Unit = onNavigateBack,
+    onNavigateToSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     BackHandler(onBack = onNavigateBack)
 
-    val sampleInitial = remember(date) {
-        com.example.hermodit.data.datasource.InMemoryTransactionDataSource.createSampleTransactions()
-            .filter { it.transactionDate == date }
-    }
-    val transactions by repository.getTransactionsForDate(date).collectAsState(initial = sampleInitial)
+    val transactions by repository.getTransactionsForDate(date).collectAsState(initial = emptyList())
     var selectedFilter by remember { mutableStateOf<TransactionType?>(null) }
 
     val filteredTransactions = remember(transactions, selectedFilter) {
@@ -120,11 +123,11 @@ fun DailyDetailScreen(
                         onClick = onNavigateBack,
                         modifier = Modifier.size(40.dp)
                     ) {
-                        Text(
-                            text = "←",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = HermoditColors.TextPrimary
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_arrow_back),
+                            contentDescription = "Back",
+                            tint = HermoditColors.TextPrimary,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
 
@@ -137,27 +140,59 @@ fun DailyDetailScreen(
                             fontWeight = FontWeight.Bold,
                             color = HermoditColors.TextPrimary
                         )
-                        Text(
-                            text = "${transactions.size} Parsed Transactions",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = HermoditColors.TextSecondary,
-                            fontSize = 11.sp
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_account_balance),
+                                contentDescription = null,
+                                tint = HermoditColors.Primary,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Commercial Bank of Ethiopia •••• 3608",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = HermoditColors.TextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
                     }
 
-                    // Share or Export action
-                    IconButton(
-                        onClick = { /* Export action */ },
-                        modifier = Modifier.size(36.dp)
+                    // Offline Security Indicator
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(HermoditColors.InflowEmeraldContainer)
+                            .border(1.dp, HermoditColors.InflowEmeraldBorder, RoundedCornerShape(50))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "⤓",
-                            fontSize = 20.sp,
-                            color = HermoditColors.TextSecondary
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_shield),
+                                contentDescription = "Offline Secure",
+                                tint = HermoditColors.InflowEmeraldDark,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "OFFLINE",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = HermoditColors.InflowEmeraldDark,
+                                fontSize = 10.sp
+                            )
+                        }
                     }
                 }
             }
+        },
+        bottomBar = {
+            HermoditBottomNav(
+                currentScreen = Screen.DailyDetail(date),
+                onDashboardClick = onNavigateToDashboard,
+                onTransactionsClick = { /* Already in transactions */ },
+                onSettingsClick = onNavigateToSettings
+            )
         },
         containerColor = HermoditColors.CanvasBackground
     ) { innerPadding ->
@@ -255,7 +290,7 @@ fun DailyDetailScreen(
                                 label = "Received",
                                 amount = CurrencyFormatter.formatAmountOnly(totalIn),
                                 color = HermoditColors.InflowEmerald,
-                                arrow = "↙",
+                                iconRes = R.drawable.ic_arrow_downward,
                                 modifier = Modifier.weight(1f)
                             )
 
@@ -264,7 +299,7 @@ fun DailyDetailScreen(
                                 label = "Withdrawn",
                                 amount = CurrencyFormatter.formatAmountOnly(totalWithdrawn),
                                 color = HermoditColors.OutflowCrimson,
-                                arrow = "↗",
+                                iconRes = R.drawable.ic_arrow_upward,
                                 modifier = Modifier.weight(1f)
                             )
 
@@ -273,7 +308,7 @@ fun DailyDetailScreen(
                                 label = "Closing",
                                 amount = closingBalance?.let { CurrencyFormatter.formatAmountOnly(it) } ?: "—",
                                 color = HermoditColors.TextPrimary,
-                                arrow = "◷",
+                                iconRes = R.drawable.ic_history,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -297,6 +332,14 @@ fun DailyDetailScreen(
                                     label = "Received ($receivedCount)",
                                     isSelected = selectedFilter == TransactionType.RECEIVED,
                                     onClick = { selectedFilter = TransactionType.RECEIVED }
+                                )
+                            }
+                            item {
+                                val depositCount = transactions.count { it.type == TransactionType.DEPOSIT }
+                                FilterPill(
+                                    label = "Deposit ($depositCount)",
+                                    isSelected = selectedFilter == TransactionType.DEPOSIT,
+                                    onClick = { selectedFilter = TransactionType.DEPOSIT }
                                 )
                             }
                             item {
@@ -358,7 +401,7 @@ fun DailyDetailScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No transactions found for the selected filter.",
+                            text = if (transactions.isEmpty()) "No transactions found for this date." else "No transactions found for the selected filter.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = HermoditColors.TextSecondary
                         )
@@ -375,6 +418,57 @@ fun DailyDetailScreen(
                     )
                 }
             }
+
+            // Offline Security Information Footer
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = HermoditColors.SurfaceCard),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, HermoditColors.OutlineVariant)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(HermoditColors.InflowEmeraldContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_shield),
+                                contentDescription = null,
+                                tint = HermoditColors.InflowEmeraldDark,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "LOCAL OFFLINE AUDIT TRAIL",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = HermoditColors.TextPrimary,
+                                fontSize = 11.sp
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "All records are parsed and stored locally on-device. No external server transmission.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = HermoditColors.TextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -384,7 +478,7 @@ private fun LedgerColumnBox(
     label: String,
     amount: String,
     color: Color,
-    arrow: String,
+    @DrawableRes iconRes: Int,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -406,11 +500,11 @@ private fun LedgerColumnBox(
                     color = HermoditColors.TextSecondary,
                     fontSize = 10.sp
                 )
-                Text(
-                    text = arrow,
-                    fontWeight = FontWeight.Bold,
-                    color = color,
-                    fontSize = 11.sp
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(12.dp)
                 )
             }
             Spacer(modifier = Modifier.height(2.dp))

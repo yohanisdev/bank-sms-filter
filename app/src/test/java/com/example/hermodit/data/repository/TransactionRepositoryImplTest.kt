@@ -79,4 +79,39 @@ class TransactionRepositoryImplTest {
         )
         assertNotNull(summary.latestReportedBalance)
     }
+
+    @Test
+    fun exists_detectsDuplicatesCorrectly() = runBlocking {
+        val tx = FinancialTransaction(
+            id = "test-dedup-1",
+            bankName = "Commercial Bank of Ethiopia",
+            accountIdentifier = "•••• 3608",
+            type = TransactionType.RECEIVED,
+            amount = BigDecimal("1500.00"),
+            counterpartyName = "Deposit Cash",
+            transactionDate = LocalDate.now(),
+            transactionTime = LocalTime.of(12, 0),
+            sourceIdentifier = "sms-source-42",
+            bankReferenceNumber = "FT424242",
+            smsTimestamp = Instant.now()
+        )
+        repository.addTransaction(tx)
+
+        assertTrue(repository.exists("sms-source-42", null))
+        assertTrue(repository.exists("other-source", "FT424242"))
+        org.junit.Assert.assertFalse(repository.exists("non-existent-source", "NON_EXISTENT_REF"))
+    }
+
+    @Test
+    fun accountConfig_persistsAndRetrievesCorrectly() = runBlocking {
+        val initialConfig = repository.getMonitoredAccountConfig().first()
+        assertEquals("Commercial Bank of Ethiopia", initialConfig.bankName)
+        assertEquals("1000763003608", initialConfig.fullAccountNumber)
+
+        val updated = initialConfig.copy(accountHolder = "YOANNIS & MEKLIT UPDATED")
+        repository.saveMonitoredAccountConfig(updated)
+
+        val retrieved = repository.getMonitoredAccountConfig().first()
+        assertEquals("YOANNIS & MEKLIT UPDATED", retrieved.accountHolder)
+    }
 }

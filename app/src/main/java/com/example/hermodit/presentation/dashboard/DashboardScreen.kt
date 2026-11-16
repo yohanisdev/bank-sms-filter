@@ -1,7 +1,12 @@
 package com.example.hermodit.presentation.dashboard
 
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,10 +17,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -23,22 +31,28 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import com.example.hermodit.R
+import com.example.hermodit.domain.model.DailyTransactionGroup
 import com.example.hermodit.presentation.components.AccountOverviewHeroCard
 import com.example.hermodit.presentation.components.DailyGroupCard
 import com.example.hermodit.presentation.components.HermoditBottomNav
 import com.example.hermodit.presentation.components.HermoditTopAppBar
 import com.example.hermodit.presentation.navigation.Screen
 import com.example.hermodit.presentation.theme.HermoditColors
-import com.example.hermodit.ui.theme.HermoditTheme
 import java.time.LocalDate
 
 /**
@@ -53,12 +67,40 @@ fun DashboardScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            viewModel.startInboxScan(context)
+        } else {
+            Toast.makeText(
+                context,
+                "SMS permission is required to scan bank notifications",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    val triggerSync = {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.READ_SMS
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasPermission) {
+            viewModel.startInboxScan(context)
+        } else {
+            permissionLauncher.launch(android.Manifest.permission.READ_SMS)
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
             HermoditTopAppBar(
-                onSyncClick = viewModel::onSyncNowClick,
+                onSyncClick = triggerSync,
                 onSettingsClick = onNavigateToSettings
             )
         },
@@ -76,7 +118,7 @@ fun DashboardScreen(
     ) { innerPadding ->
         DashboardContent(
             uiState = uiState,
-            onSyncClick = viewModel::onSyncNowClick,
+            onSyncClick = triggerSync,
             onNavigateToDailyDetail = onNavigateToDailyDetail,
             onNavigateToAccountConfig = onNavigateToAccountConfig,
             modifier = Modifier.padding(innerPadding)
@@ -102,6 +144,27 @@ fun DashboardContent(
         return
     }
 
+    var selectedFilter by remember { mutableStateOf("ALL") }
+
+    val filteredGroups = remember(uiState.dailyGroups, selectedFilter) {
+        when (selectedFilter) {
+            "TELEBIRR" -> {
+                uiState.dailyGroups.mapNotNull { group ->
+                    val telebirrTxs = group.transactions.filter {
+                        it.channel == "TELEBIRR" || it.counterpartyName?.contains("telebirr", ignoreCase = true) == true
+                    }
+                    if (telebirrTxs.isNotEmpty()) {
+                        DailyTransactionGroup(
+                            summary = group.summary.copy(transactionCount = telebirrTxs.size),
+                            transactions = telebirrTxs
+                        )
+                    } else null
+                }
+            }
+            else -> uiState.dailyGroups
+        }
+    }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -125,11 +188,13 @@ fun DashboardContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "🛡",
-                            fontSize = 13.sp
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_shield),
+                            contentDescription = "Security",
+                            tint = HermoditColors.Primary,
+                            modifier = Modifier.size(15.dp)
                         )
-                        Spacer(modifier = Modifier.padding(horizontal = 3.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Zero Remote Calls • 100% On-Device SMS Parsing",
                             style = MaterialTheme.typography.labelSmall,
@@ -142,8 +207,8 @@ fun DashboardContent(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFFF0F9FF))
-                            .border(1.dp, Color(0xFFBAE6FD), RoundedCornerShape(4.dp))
+                            .background(HermoditColors.PrimaryLight)
+                            .border(1.dp, HermoditColors.PrimaryBorder, RoundedCornerShape(4.dp))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
@@ -170,6 +235,86 @@ fun DashboardContent(
             )
         }
 
+        // Live Scanning Progress / Audit Bar (if active or just scanned)
+        if (uiState.isSyncing || uiState.scanProgress.scannedCount > 0) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(HermoditColors.SurfaceNested)
+                        .border(1.dp, HermoditColors.PrimaryBorder, RoundedCornerShape(12.dp))
+                        .padding(12.dp)
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (uiState.isSyncing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(14.dp),
+                                        strokeWidth = 2.dp,
+                                        color = HermoditColors.Primary
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Scanning SMS Inbox...",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = HermoditColors.Primary
+                                    )
+                                } else {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_check_circle),
+                                        contentDescription = "Completed",
+                                        tint = HermoditColors.InflowEmerald,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Inbox Scan Completed",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = HermoditColors.InflowEmerald
+                                    )
+                                }
+                            }
+
+                            Text(
+                                text = "Saved: ${uiState.scanProgress.savedCount} txs",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                color = HermoditColors.TextPrimary
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = "Scanned: ${uiState.scanProgress.scannedCount} • Matched: ${uiState.scanProgress.matchedCount} • Duplicates: ${uiState.scanProgress.duplicateCount} • Ignored: ${uiState.scanProgress.ignoredCount} • Ambiguous: ${uiState.scanProgress.ambiguousCount}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = HermoditColors.TextSecondary,
+                            fontSize = 11.sp
+                        )
+
+                        uiState.scanProgress.errorMessage?.let { err ->
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = err,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = HermoditColors.OutflowCrimson,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // Quick Filter Row
         item {
             Row(
@@ -178,40 +323,68 @@ fun DashboardContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val isAll = selectedFilter == "ALL"
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
-                            .background(Color(0xFFF0F9FF))
-                            .border(1.dp, Color(0xFFBAE6FD), RoundedCornerShape(50))
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                            .background(if (isAll) HermoditColors.PrimaryLight else HermoditColors.SurfaceCard)
+                            .border(
+                                1.dp,
+                                if (isAll) HermoditColors.PrimaryBorder else HermoditColors.OutlineVariant,
+                                RoundedCornerShape(50)
+                            )
+                            .clickable { selectedFilter = "ALL" }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Text(
-                            text = "All CBE Inboxes",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = HermoditColors.Primary,
-                            fontSize = 12.sp
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_filter_alt),
+                                contentDescription = "Filter",
+                                tint = if (isAll) HermoditColors.Primary else HermoditColors.TextSecondary,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "All CBE Inboxes",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (isAll) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isAll) HermoditColors.Primary else HermoditColors.TextSecondary,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
 
+                    val isTelebirr = selectedFilter == "TELEBIRR"
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
-                            .background(HermoditColors.SurfaceCard)
-                            .border(1.dp, HermoditColors.OutlineVariant, RoundedCornerShape(50))
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                            .background(if (isTelebirr) HermoditColors.PrimaryLight else HermoditColors.SurfaceCard)
+                            .border(
+                                1.dp,
+                                if (isTelebirr) HermoditColors.PrimaryBorder else HermoditColors.OutlineVariant,
+                                RoundedCornerShape(50)
+                            )
+                            .clickable { selectedFilter = if (isTelebirr) "ALL" else "TELEBIRR" }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            text = "Telebirr (Off)",
+                            text = if (isTelebirr) "Telebirr (Active)" else "Telebirr",
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Medium,
-                            color = HermoditColors.TextSecondary,
+                            fontWeight = if (isTelebirr) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isTelebirr) HermoditColors.Primary else HermoditColors.TextSecondary,
                             fontSize = 12.sp
                         )
                     }
                 }
 
-                TextButton(onClick = { /* Export CSV action */ }) {
+                TextButton(onClick = { /* Export action */ }) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_file_download),
+                        contentDescription = "Export CSV",
+                        tint = HermoditColors.Primary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "Export CSV",
                         style = MaterialTheme.typography.labelSmall,
@@ -253,7 +426,7 @@ fun DashboardContent(
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "${uiState.dailyGroups.size} Days Active",
+                        text = "${filteredGroups.size} Days Active",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Medium,
                         color = HermoditColors.TextPrimary,
@@ -263,17 +436,55 @@ fun DashboardContent(
             }
         }
 
-        // Daily Groups List (Newest to Oldest)
-        items(
-            items = uiState.dailyGroups,
-            key = { it.summary.date.toString() }
-        ) { group ->
-            val isToday = group.summary.date == LocalDate.of(2026, 11, 16)
-            DailyGroupCard(
-                group = group,
-                onClick = { onNavigateToDailyDetail(group.summary.date) },
-                isToday = isToday
-            )
+        // Empty state when Room database has no transactions yet
+        if (filteredGroups.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(HermoditColors.SurfaceCard)
+                        .border(1.dp, HermoditColors.OutlineVariant, RoundedCornerShape(16.dp))
+                        .padding(28.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_receipt_long),
+                            contentDescription = "No transactions",
+                            tint = HermoditColors.Outline,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "No Parsed Transactions",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = HermoditColors.TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "No SMS notifications found for monitored account 1000763003608. Tap 'Sync Now' above to scan your SMS inbox.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = HermoditColors.TextSecondary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            }
+        } else {
+            // Daily Groups List (Newest to Oldest)
+            items(
+                items = filteredGroups,
+                key = { it.summary.date.toString() }
+            ) { group ->
+                val isToday = group.summary.date == LocalDate.now()
+                DailyGroupCard(
+                    group = group,
+                    onClick = { onNavigateToDailyDetail(group.summary.date) },
+                    isToday = isToday
+                )
+            }
         }
 
         // Offline SMS Telemetry Card
@@ -323,12 +534,12 @@ fun DashboardContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFF8FAFC))
+                            .background(HermoditColors.SurfaceLow)
                             .border(1.dp, HermoditColors.OutlineVariant, RoundedCornerShape(8.dp))
                             .padding(10.dp)
                     ) {
                         Text(
-                            text = "Dear Customer, ETB 5,000.00 transferred to your CBE Account ...4582. Balance ETB 25,000.00. Ref: FT26321.",
+                            text = "Dear Customer, ETB 5,000.00 transferred to your CBE Account ...3608. Balance ETB 25,000.00. Ref: FT26321.",
                             fontFamily = FontFamily.Monospace,
                             fontSize = 11.sp,
                             lineHeight = 16.sp,
@@ -338,62 +549,5 @@ fun DashboardContent(
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DashboardScreenPreview() {
-    val sampleTxs = com.example.hermodit.data.datasource.InMemoryTransactionDataSource.createSampleTransactions()
-    val groups = listOf(
-        com.example.hermodit.domain.model.DailyTransactionGroup(
-            summary = com.example.hermodit.domain.model.DailySummary(
-                date = LocalDate.of(2026, 11, 16),
-                totalReceived = java.math.BigDecimal("6000.00"),
-                totalDeposited = java.math.BigDecimal("2500.00"),
-                totalWithdrawn = java.math.BigDecimal("3500.00"),
-                netMovement = java.math.BigDecimal("5000.00"),
-                latestReportedBalance = java.math.BigDecimal("25000.00"),
-                transactionCount = 10
-            ),
-            transactions = sampleTxs.filter { it.transactionDate == LocalDate.of(2026, 11, 16) }
-        ),
-        com.example.hermodit.domain.model.DailyTransactionGroup(
-            summary = com.example.hermodit.domain.model.DailySummary(
-                date = LocalDate.of(2026, 11, 15),
-                totalReceived = java.math.BigDecimal("4000.00"),
-                totalDeposited = java.math.BigDecimal.ZERO,
-                totalWithdrawn = java.math.BigDecimal("1000.00"),
-                netMovement = java.math.BigDecimal("3000.00"),
-                latestReportedBalance = java.math.BigDecimal("20000.00"),
-                transactionCount = 7
-            ),
-            transactions = sampleTxs.filter { it.transactionDate == LocalDate.of(2026, 11, 15) }
-        ),
-        com.example.hermodit.domain.model.DailyTransactionGroup(
-            summary = com.example.hermodit.domain.model.DailySummary(
-                date = LocalDate.of(2026, 11, 14),
-                totalReceived = java.math.BigDecimal.ZERO,
-                totalDeposited = java.math.BigDecimal.ZERO,
-                totalWithdrawn = java.math.BigDecimal("2150.00"),
-                netMovement = java.math.BigDecimal("-2150.00"),
-                latestReportedBalance = java.math.BigDecimal("17000.00"),
-                transactionCount = 4
-            ),
-            transactions = sampleTxs.filter { it.transactionDate == LocalDate.of(2026, 11, 14) }
-        )
-    )
-
-    HermoditTheme {
-        DashboardContent(
-            uiState = DashboardUiState(
-                isLoading = false,
-                availableBalance = java.math.BigDecimal("25000.00"),
-                dailyGroups = groups
-            ),
-            onSyncClick = {},
-            onNavigateToDailyDetail = {},
-            onNavigateToAccountConfig = {}
-        )
     }
 }

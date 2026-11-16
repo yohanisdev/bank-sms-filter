@@ -1,11 +1,13 @@
 package com.example.hermodit.presentation.components
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +21,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,10 +30,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.hermodit.R
 import com.example.hermodit.core.util.CurrencyFormatter
 import com.example.hermodit.domain.model.BankAccountConfig
 import com.example.hermodit.presentation.theme.HermoditColors
@@ -47,6 +56,9 @@ fun AccountOverviewHeroCard(
     modifier: Modifier = Modifier,
     isSyncing: Boolean = false,
 ) {
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -74,8 +86,8 @@ fun AccountOverviewHeroCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(Color(0xFFF0F9FF))
-                                .border(1.dp, Color(0xFFBAE6FD), RoundedCornerShape(6.dp))
+                                .background(HermoditColors.PrimaryLight)
+                                .border(1.dp, HermoditColors.PrimaryBorder, RoundedCornerShape(6.dp))
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
@@ -105,13 +117,37 @@ fun AccountOverviewHeroCard(
                             fontFamily = FontFamily.Monospace,
                             color = HermoditColors.TextPrimary
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Copy account number action
+                        IconButton(
+                            onClick = {
+                                clipboardManager.setText(AnnotatedString(accountConfig.fullAccountNumber))
+                                Toast.makeText(context, "Account number copied", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_content_copy),
+                                contentDescription = "Copy account number",
+                                tint = HermoditColors.TextSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "|",
                             color = HermoditColors.Outline,
                             fontSize = 12.sp
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_shield),
+                            contentDescription = "Shield Active",
+                            tint = HermoditColors.InflowEmerald,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "SMS Shield Active",
                             style = MaterialTheme.typography.labelSmall,
@@ -185,15 +221,16 @@ fun AccountOverviewHeroCard(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Footer: Last SMS sync & Sync Now action
+            // Divider
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(1.dp)
-                    .background(Color(0xFFF1F5F9))
+                    .background(HermoditColors.DividerColor)
             )
             Spacer(modifier = Modifier.height(14.dp))
 
+            // Footer: Last SMS sync & Sync Now action
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -219,8 +256,15 @@ fun AccountOverviewHeroCard(
                     enabled = !isSyncing,
                     colors = ButtonDefaults.buttonColors(containerColor = HermoditColors.Primary),
                     shape = RoundedCornerShape(50),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 18.dp, vertical = 10.dp)
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
                 ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_sync),
+                        contentDescription = "Sync Now",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = if (isSyncing) "Syncing..." else "Sync Now",
                         fontWeight = FontWeight.SemiBold,

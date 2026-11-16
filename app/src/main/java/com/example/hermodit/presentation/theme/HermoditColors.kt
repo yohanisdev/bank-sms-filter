@@ -10,6 +10,7 @@ object HermoditColors {
     val Primary = Color(0xFF0284C7)
     val PrimaryContainer = Color(0xFF007BB9)
     val PrimaryLight = Color(0xFFE0F2FE)
+    val PrimaryBorder = Color(0xFFBAE6FD)
     val PrimaryFixed = Color(0xFFCCE5FF)
 
     // Secondary - Emerald Inflow (Incoming deposits / credits)
@@ -28,9 +29,11 @@ object HermoditColors {
     val CanvasBackground = Color(0xFFF8FAFC)
     val SurfaceCard = Color(0xFFFFFFFF)
     val SurfaceNested = Color(0xFFF1F5F9)
+    val SurfaceLow = Color(0xFFF8FAFC)
     val Outline = Color(0xFFCBD5E1)
     val OutlineVariant = Color(0xFFE2E8F0)
     val TextPrimary = Color(0xFF0F172A)
     val TextSecondary = Color(0xFF64748B)
     val TextMuted = Color(0xFF94A3B8)
+    val DividerColor = Color(0xFFF1F5F9)
 }

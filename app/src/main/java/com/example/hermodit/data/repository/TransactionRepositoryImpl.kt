@@ -1,24 +1,38 @@
 package com.example.hermodit.data.repository
 
 import com.example.hermodit.data.datasource.TransactionLocalDataSource
+import com.example.hermodit.data.local.dao.BankAccountConfigDao
+import com.example.hermodit.data.local.dao.UnmatchedSmsDao
+import com.example.hermodit.data.local.entity.BankAccountConfigEntity
+import com.example.hermodit.data.local.entity.UnmatchedSmsEntity
+import com.example.hermodit.domain.model.BankAccountConfig
 import com.example.hermodit.domain.model.DailySummary
 import com.example.hermodit.domain.model.DailyTransactionGroup
 import com.example.hermodit.domain.model.FinancialSummary
 import com.example.hermodit.domain.model.FinancialTransaction
 import com.example.hermodit.domain.model.TransactionType
+import com.example.hermodit.domain.model.UnmatchedSmsRecord
 import com.example.hermodit.domain.repository.TransactionRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalTime
 
 /**
- * Default implementation of [TransactionRepository] supporting daily grouping and accurate bank ledger aggregation.
+ * Implementation of [TransactionRepository] supporting daily grouping,
+ * accurate bank ledger aggregation, Room configuration persistence, and unmatched SMS logging.
  */
 class TransactionRepositoryImpl(
-    private val localDataSource: TransactionLocalDataSource
+    private val localDataSource: TransactionLocalDataSource,
+    private val configDao: BankAccountConfigDao? = null,
+    private val unmatchedSmsDao: UnmatchedSmsDao? = null
 ) : TransactionRepository {
+
+    private val inMemoryConfigFlow = MutableStateFlow(BankAccountConfig())
+    private val inMemoryUnmatchedFlow = MutableStateFlow<List<UnmatchedSmsRecord>>(emptyList())
 
     override fun getTransactions(): Flow<List<FinancialTransaction>> {
         return localDataSource.getTransactions()
@@ -96,6 +110,64 @@ class TransactionRepositoryImpl(
 
     override suspend fun deleteTransaction(id: String) {
         localDataSource.deleteTransaction(id)
+    }
+
+    override suspend fun exists(sourceId: String, bankReferenceNumber: String?): Boolean {
+        return localDataSource.exists(sourceId, bankReferenceNumber)
+    }
+
+    override suspend fun getTransactionCount(): Int {
+        return localDataSource.getTransactionCount()
+    }
+
+    override fun getMonitoredAccountConfig(): Flow<BankAccountConfig> {
+        return if (configDao != null) {
+            configDao.getConfigFlow().map { entity ->
+                entity?.toDomain() ?: BankAccountConfig()
+            }
+        } else {
+            inMemoryConfigFlow.asStateFlow()
+        }
+    }
+
+    override suspend fun saveMonitoredAccountConfig(config: BankAccountConfig) {
+        if (configDao != null) {
+            configDao.saveConfig(BankAccountConfigEntity.fromDomain(config))
+        } else {
+            inMemoryConfigFlow.value = config
+        }
+    }
+
+    override suspend fun recordUnmatchedSms(record: UnmatchedSmsRecord) {
+        if (unmatchedSmsDao != null) {
+            unmatchedSmsDao.insert(UnmatchedSmsEntity.fromDomain(record))
+        } else {
+            inMemoryUnmatchedFlow.value = listOf(record) + inMemoryUnmatchedFlow.value
+        }
+    }
+
+    override fun getUnmatchedSmsRecords(): Flow<List<UnmatchedSmsRecord>> {
+        return if (unmatchedSmsDao != null) {
+            unmatchedSmsDao.getAll().map { list -> list.map { it.toDomain() } }
+        } else {
+            inMemoryUnmatchedFlow.asStateFlow()
+        }
+    }
+
+    override suspend fun deleteUnmatchedSmsRecord(id: String) {
+        if (unmatchedSmsDao != null) {
+            unmatchedSmsDao.deleteById(id)
+        } else {
+            inMemoryUnmatchedFlow.value = inMemoryUnmatchedFlow.value.filterNot { it.id == id }
+        }
+    }
+
+    override suspend fun getUnmatchedSmsCount(): Int {
+        return if (unmatchedSmsDao != null) {
+            unmatchedSmsDao.count()
+        } else {
+            inMemoryUnmatchedFlow.value.size
+        }
     }
 
     override fun getFinancialSummary(): Flow<FinancialSummary> {

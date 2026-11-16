@@ -63,6 +63,21 @@ class InMemoryTransactionDataSource : TransactionLocalDataSource {
         }
     }
 
+    override suspend fun exists(sourceId: String, bankReferenceNumber: String?): Boolean {
+        return mutex.withLock {
+            transactionsFlow.value.any { tx ->
+                tx.sourceIdentifier == sourceId ||
+                    (!bankReferenceNumber.isNullOrBlank() && tx.bankReferenceNumber == bankReferenceNumber)
+            }
+        }
+    }
+
+    override suspend fun getTransactionCount(): Int {
+        return mutex.withLock {
+            transactionsFlow.value.size
+        }
+    }
+
     companion object {
         fun createSampleTransactions(): List<FinancialTransaction> {
             val today = LocalDate.of(2026, 11, 16)

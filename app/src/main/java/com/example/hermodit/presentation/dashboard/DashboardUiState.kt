@@ -1,5 +1,6 @@
 package com.example.hermodit.presentation.dashboard
 
+import com.example.hermodit.data.sms.ScanProgress
 import com.example.hermodit.domain.model.BankAccountConfig
 import com.example.hermodit.domain.model.DailyTransactionGroup
 import com.example.hermodit.domain.model.FinancialSummary
@@ -21,5 +22,6 @@ data class DashboardUiState(
         transactionCount = 0,
         currency = "ETB"
     ),
+    val scanProgress: ScanProgress = ScanProgress(),
     val userMessage: String? = null
 )
