@@ -1,5 +1,6 @@
 package com.example.hermodit.presentation.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -51,20 +52,19 @@ fun HermoditTopAppBar(
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Brand wallet badge
+            // Brand logo badge
             Box(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(HermoditColors.PrimaryLight)
-                    .border(1.dp, HermoditColors.PrimaryBorder, RoundedCornerShape(10.dp)),
+                    .background(HermoditColors.SurfaceNested)
+                    .border(1.dp, HermoditColors.OutlineVariant, RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_wallet),
-                    contentDescription = "Wallet",
-                    tint = HermoditColors.Primary,
-                    modifier = Modifier.size(20.dp)
+                Image(
+                    painter = painterResource(id = R.drawable.app_logo),
+                    contentDescription = "Hermodit Logo",
+                    modifier = Modifier.size(26.dp)
                 )
             }
 
